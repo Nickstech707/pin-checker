@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KRA PIN Checker</title>
+    <style>
+      :root {
+        --primary: #1a73e8;
+        --success: #1e8e3e;
+        --error: #d93025;
+        --bg: #f8f9fa;
+        --card: #ffffff;
+        --text: #3c4043;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Segoe UI", Roboto, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+      }
+
+      .container {
+        background: var(--card);
+        padding: 32px;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3);
+        width: 100%;
+        max-width: 480px;
+      }
+      h1 {
+        font-size: 20px;
+        font-weight: 500;
+        margin-bottom: 24px;
+        text-align: center;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+      label {
+        display: block;
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 8px;
+      }
+        select, input { width: 100%; padding: 12px; border: 1px solid #dadce0; border-radius: 4px; font-size: 16px; outline: none; }
+        select:focus, input:focus { border-color: var(--primary); }
+
+        /* Custom Selector Styles */
+        .custom-select { position: relative; width: 100%; }
+        .custom-select-trigger {
+            width: 100%; padding: 12px; border: 1px solid #dadce0; border-radius: 4px;
+            font-size: 16px; background: white; cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .custom-select-trigger::after {
+            content: ""; width: 0; height: 0; border-left: 5px solid transparent;
+            border-right: 5px solid transparent; border-top: 5px solid #5f6368;
+            transition: transform 0.2s;
+        }
+        .custom-select-trigger.active { border-color: var(--primary); }
+        .custom-select-trigger.active::after { transform: rotate(180deg); }
+
+        .custom-select-options {
+            position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+            background: white; border: 1px solid #dadce0; border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 1000; display: none;
+            max-height: 200px; overflow-y: auto;
+        }
+        .custom-select-options.show { display: block; }
+        .custom-select-option {
+            padding: 12px; cursor: pointer; font-size: 14px;
+            border-bottom: 1px solid #f1f3f4;
+        }
+        .custom-select-option:last-child { border-bottom: none; }
+        .custom-select-option:hover { background: #f8f9fa; }
+        .custom-select-option.selected { color: var(--primary); font-weight: 500; background: #e8f0fe; }
+
+      button {
+        width: 100%;
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 14px;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      button:hover {
+        background: #185abc;
+      }
+      button:disabled {
+        background: #dadce0;
+        cursor: not-allowed;
+      }
+
+      .result {
+        margin-bottom: 24px;
+        padding: 16px;
+        border-radius: 4px;
+        display: none;
+        border: 1px solid transparent;
+      }
+      .result.success {
+        display: block;
+        background: #e6f4ea;
+        border-color: var(--success);
+        color: #137333;
+      }
+      .result.error {
+        display: block;
+        background: #fce8e6;
+        border-color: var(--error);
+        color: #a50e0e;
+      }
+
+      .data-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        font-size: 14px;
+      }
+      .data-row:last-child {
+        border-bottom: none;
+      }
+      .data-label {
+        color: #5f6368;
+      }
+      .data-value {
+        font-weight: 500;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>KRA PIN Checker</h1>
+
+      <div class="form-group">
+        <label>Taxpayer Type</label>
+        <div class="custom-select" id="typeSelector">
+            <div class="custom-select-trigger" id="selectTrigger">
+                <span id="selectValue">Kenyan Resident (KE)</span>
+            </div>
+            <div class="custom-select-options" id="selectOptions">
+                <div class="custom-select-option selected" data-value="KE">Kenyan Resident (KE)</div>
+                <div class="custom-select-option" data-value="NKE">Non-Kenyan Resident (NKE)</div>
+                <div class="custom-select-option" data-value="NKENR">Non-Kenyan Non-Resident (NKENR)</div>
+                <div class="custom-select-option" data-value="COMP">Company (COMP)</div>
+            </div>
+        </div>
+        <input type="hidden" id="taxpayerType" value="KE">
+      </div>
+
+        <div class="form-group">
+            <label>ID Number</label>
+            <input type="text" id="idNumber" autocomplete="off">
+        </div>
+
+      <div id="result" class="result"></div>
+
+      <button id="checkBtn">Check PIN</button>
+    </div>
+
+    <script>
+        const checkBtn = document.getElementById('checkBtn');
+        const resultDiv = document.getElementById('result');
+        const idInput = document.getElementById('idNumber');
+        const taxpayerTypeInput = document.getElementById('taxpayerType');
+        const selectTrigger = document.getElementById('selectTrigger');
+        const selectOptions = document.getElementById('selectOptions');
+        const selectValue = document.getElementById('selectValue');
+
+        const TEST_IDS = {
+            'KE': '41789723',
+            'NKE': '787528',
+            'NKENR': 'B3962C4A5718',
+            'COMP': '0000200S4304'
+        };
+
+        // Custom Dropdown Logic
+        selectTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectOptions.classList.toggle('show');
+            selectTrigger.classList.toggle('active');
+        });
+
+        document.addEventListener('click', () => {
+            selectOptions.classList.remove('show');
+            selectTrigger.classList.remove('active');
+        });
+
+        selectOptions.querySelectorAll('.custom-select-option').forEach(option => {
+            option.addEventListener('click', function() {
+                const value = this.getAttribute('data-value');
+                const text = this.textContent;
+
+                // Update state
+                taxpayerTypeInput.value = value;
+                selectValue.textContent = text;
+                
+                // Update selection UI
+                selectOptions.querySelectorAll('.custom-select-option').forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+
+                // Autocomplete logic
+                if (TEST_IDS[value]) {
+                    idInput.value = TEST_IDS[value];
+                }
+
+                selectOptions.classList.remove('show');
+                selectTrigger.classList.remove('active');
+            });
+        });
+
+        // Initialize with default selection
+        if (TEST_IDS[taxpayerTypeInput.value]) idInput.value = TEST_IDS[taxpayerTypeInput.value];
+
+        checkBtn.addEventListener('click', async () => {
+            const taxId = idInput.value.trim();
+            const taxType = taxpayerTypeInput.value;
+
+        if (!taxId) {
+          showResult("Please enter an ID number", "error");
+          return;
+        }
+
+        setLoading(true);
+
+            try {
+                const apiBase = window.location.origin;
+                const response = await fetch(`${apiBase}/api/check-pin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ TaxpayerID: taxId, TaxpayerType: taxType })
+                });
+
+          const resData = await response.json();
+
+          if (response.ok && resData.success) {
+            showSuccess(resData.idNumber, resData.data);
+          } else {
+            showResult(
+              resData.message || resData.error + ": " + taxId,
+              "error",
+            );
+          }
+        } catch (err) {
+          showResult("System Error: Unable to reach server", "error");
+        } finally {
+          setLoading(false);
+        }
+      });
+
+      function setLoading(isLoading) {
+        checkBtn.disabled = isLoading;
+        checkBtn.textContent = isLoading ? "Checking..." : "Check PIN";
+        if (isLoading) {
+            resultDiv.classList.remove('success', 'error');
+            resultDiv.style.display = "none";
+        }
+      }
+
+      function showResult(message, type) {
+        resultDiv.textContent = message;
+        resultDiv.style.display = ""; // Reset inline style
+        resultDiv.className = `result ${type}`;
+      }
+
+      function showSuccess(id, data) {
+        let html = `<strong>Valid ID Number: ${id}</strong><br><br>`;
+
+        // Map common KRA fields to human-readable labels
+        const fields = {
+            'taxpayer_name': 'Taxpayer Name',
+            'TaxpayerName': 'Taxpayer Name',
+            'name': 'Taxpayer Name',
+            'pin': 'KRA PIN',
+            'TaxpayerPIN': 'KRA PIN',
+            'pin_status': 'PIN Status',
+            'PINStatus': 'PIN Status',
+            'itax_status': 'iTax Status',
+            'iTaxStatus': 'iTax Status'
+        };
+
+        const skipFields = ['ResponseCode', 'success', 'status', 'TaxpayerPIN', 'TaxpayerName', 'PINStatus', 'iTaxStatus'];
+
+        for (const [key, value] of Object.entries(data)) {
+          if (skipFields.includes(key)) continue;
+          
+          const label = fields[key] || key.replace(/([A-Z])/g, ' $1').replace(/_/g, " ").trim().toUpperCase();
+          if (value && typeof value !== "object") {
+            html += `<div class="data-row">
+                        <span class="data-label">${label}</span>
+                        <span class="data-value">${value}</span>
+                     </div>`;
+          }
+        }
+
+        resultDiv.innerHTML = html;
+        resultDiv.style.display = ""; // Reset inline style
+        resultDiv.className = "result success";
+      }
+    </script>
+  </body>
+</html>
